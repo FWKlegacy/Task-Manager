@@ -215,37 +215,51 @@ const server = http.createServer((req, res) => {
 		let body = '';
 		req.on('data', chunk => (body += chunk.toString()));
 		req.on('end', () => {
-			const { email, password } = JSON.parse(body);
-			if (!email || !password) {
-				res.writeHead(400);
-				res.end(JSON.stringify({ message: 'Email and password required' }));
-				return;
-			}
-			db.query('SELECT * FROM users WHERE email = ?', [email], (err, rows) => {
-				if (err) {
-					res.writeHead(500);
-					res.end(JSON.stringify({ message: 'Database error' }));
-				} else if (rows.length === 0) {
-					res.writeHead(401);
-					res.end(JSON.stringify({ message: 'Invalid credentials' }));
-				} else {
-					const user = rows[0];
-					bcrypt.compare(password, user.password, (err, match) => {
-						if (err || !match) {
-							res.writeHead(401);
-							res.end(JSON.stringify({ message: 'Invalid credentials' }));
-						} else {
-							delete user.password;
-							res.writeHead(200);
-							res.end(JSON.stringify({ message: 'Login successful', user }));
-						}
-					});
-				}
-			});
-		});
+			try {
+				const { email, password } = JSON.parse(body);
 
-		// Serve static files
-	} else if (req.method === 'GET') {
+				if (!email || !password) {
+					res.writeHead(400);
+					res.end(JSON.stringify({ message: 'Email and password required' }));
+					return;
+				}
+
+				db.query('SELECT * FROM users WHERE email = ?', [email], (err, rows) => {
+					if (err) {
+						console.error('DB error during login:', err);
+						res.writeHead(500);
+						res.end(JSON.stringify({ message: 'Database error', error: err.message }));
+					} else if (rows.length === 0) {
+						res.writeHead(401);
+						res.end(JSON.stringify({ message: 'Invalid credentials' }));
+					} else {
+						const user = rows[0];
+						bcrypt.compare(password, user.password, (err, match) => {
+							if (err) {
+								console.error('Bcrypt error:', err); // ✅ add this
+								res.writeHead(500);
+								res.end(JSON.stringify({ message: 'Error comparing password' }));
+							} else if (!match) {
+								res.writeHead(401);
+								res.end(JSON.stringify({ message: 'Invalid credentials' }));
+							} else {
+								delete user.password;
+								res.writeHead(200);
+								res.end(JSON.stringify({ message: 'Login successful', user }));
+							}
+						});
+					}
+				});
+			} catch (parseErr) {
+				console.error('JSON parse error:', parseErr);
+				res.writeHead(400);
+				res.end(JSON.stringify({ message: 'Invalid JSON format' }));
+			}
+		});
+	}
+
+	// Serve static files
+	else if (req.method === 'GET') {
 		const publicPath = path.join(__dirname, '../public');
 		const filePath = path.join(publicPath, pathname === '/' ? 'login.html' : pathname);
 		fs.readFile(filePath, (err, data) => {
