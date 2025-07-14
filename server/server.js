@@ -7,23 +7,25 @@ const bcrypt = require('bcrypt');
 const sendTaskAssignmentEmail = require('./sendMail');
 
 const saltRounds = 10;
-res.setHeader('Access-Control-Allow-Origin', '*');
-res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-if (req.method === 'OPTIONS') {
-	res.writeHead(204);
-	res.end();
-	return;
-}
 
 const server = http.createServer((req, res) => {
 	const parsedUrl = url.parse(req.url, true);
 	const { pathname, query } = parsedUrl;
 
+	//  Setting CORS headers
+	res.setHeader('Access-Control-Allow-Origin', '*');
+	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+	res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+	if (req.method === 'OPTIONS') {
+		res.writeHead(204);
+		res.end();
+		return;
+	}
+
 	res.setHeader('Content-Type', 'application/json');
 
-	// Get all users
+	// GET all users
 	if (req.method === 'GET' && pathname === '/users') {
 		db.query('SELECT id, name, email, role FROM users', (err, results) => {
 			if (err) {
@@ -34,7 +36,7 @@ const server = http.createServer((req, res) => {
 			}
 		});
 
-		// Register user
+		// Add user (admin)
 	} else if (req.method === 'POST' && pathname === '/users') {
 		let body = '';
 		req.on('data', chunk => (body += chunk.toString()));
@@ -83,6 +85,7 @@ const server = http.createServer((req, res) => {
 
 			const updates = [];
 			const values = [];
+
 			if (name) {
 				updates.push('name = ?');
 				values.push(name);
@@ -95,9 +98,10 @@ const server = http.createServer((req, res) => {
 				updates.push('role = ?');
 				values.push(role);
 			}
-			values.push(user_id);
-			const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
 
+			values.push(user_id);
+
+			const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
 			db.query(sql, values, (err, result) => {
 				if (err) {
 					res.writeHead(500);
@@ -132,7 +136,7 @@ const server = http.createServer((req, res) => {
 			});
 		});
 
-		// Assign task
+		// Assign task (admin)
 	} else if (req.method === 'POST' && pathname === '/tasks') {
 		let body = '';
 		req.on('data', chunk => (body += chunk.toString()));
@@ -162,7 +166,7 @@ const server = http.createServer((req, res) => {
 			});
 		});
 
-		// Get tasks for user
+		// Get tasks (user)
 	} else if (req.method === 'GET' && pathname === '/tasks') {
 		const userId = query.user_id;
 		if (!userId) {
@@ -205,6 +209,8 @@ const server = http.createServer((req, res) => {
 				}
 			});
 		});
+
+		// Login
 	} else if (req.method === 'POST' && pathname === '/login') {
 		let body = '';
 		req.on('data', chunk => (body += chunk.toString()));
@@ -238,7 +244,7 @@ const server = http.createServer((req, res) => {
 			});
 		});
 
-		// Static file fallback
+		// Serve static files
 	} else if (req.method === 'GET') {
 		const publicPath = path.join(__dirname, '../public');
 		const filePath = path.join(publicPath, pathname === '/' ? 'login.html' : pathname);
@@ -253,6 +259,8 @@ const server = http.createServer((req, res) => {
 				res.end(JSON.stringify({ message: 'File not found' }));
 			}
 		});
+
+		// 404 fallback
 	} else {
 		res.writeHead(404);
 		res.end(JSON.stringify({ message: 'Not found' }));
