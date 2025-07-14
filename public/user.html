@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>User Task Dashboard</title>
+		<link rel="stylesheet" href="style.css" />
+		<style>
+			#logoutBtn {
+				position: absolute;
+				top: 20px;
+				right: 30px;
+				padding: 8px 14px;
+				background-color: #dc3545;
+				color: white;
+				border: none;
+				border-radius: 5px;
+				cursor: pointer;
+				font-size: 14px;
+				box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+				transition: background-color 0.3s ease;
+			}
+
+			#logoutBtn:hover {
+				background-color: #b02a37;
+			}
+		</style>
+	</head>
+	<button id="logoutBtn" onclick="logout()">Logout</button>
+
+	<body>
+		<div class="container">
+			<h1>User Task Dashboard</h1>
+
+			<div class="input-section">
+				<label for="userId">Enter Your User ID:</label>
+				<input type="number" id="userId" placeholder="e.g. 2" />
+				<button id="loadBtn">Load My Tasks</button>
+			</div>
+
+			<div id="alert"></div>
+
+			<h2>Your Tasks</h2>
+			<div id="tasks"></div>
+		</div>
+
+		<script src="views/user.js"></script>
+	</body>
+</html>
