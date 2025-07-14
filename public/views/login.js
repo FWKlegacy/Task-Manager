@@ -1,6 +1,5 @@
 // login.js
-const api = 'http://localhost:3000';
-
+const api = 'https://task-manager-production-588c.up.railway.app';
 document.getElementById('loginForm').addEventListener('submit', async e => {
 	e.preventDefault();
 

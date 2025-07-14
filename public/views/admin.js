@@ -1,4 +1,4 @@
-const api = 'http://localhost:3000';
+const api = 'https://task-manager-production-588c.up.railway.app';
 const userId = sessionStorage.getItem('user_id');
 const role = sessionStorage.getItem('role');
 

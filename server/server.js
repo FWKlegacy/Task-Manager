@@ -7,6 +7,15 @@ const bcrypt = require('bcrypt');
 const sendTaskAssignmentEmail = require('./sendMail');
 
 const saltRounds = 10;
+res.setHeader('Access-Control-Allow-Origin', '*');
+res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+if (req.method === 'OPTIONS') {
+	res.writeHead(204);
+	res.end();
+	return;
+}
 
 const server = http.createServer((req, res) => {
 	const parsedUrl = url.parse(req.url, true);
