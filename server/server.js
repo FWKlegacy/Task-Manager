@@ -1,5 +1,6 @@
+require('dotenv').config();
 const http = require('http');
-const db = require('./db');
+const db = require('./db'); // uses a pooled connection
 const url = require('url');
 const fs = require('fs');
 const path = require('path');
@@ -12,7 +13,6 @@ const server = http.createServer((req, res) => {
 	const parsedUrl = url.parse(req.url, true);
 	const { pathname, query } = parsedUrl;
 
-	//  Setting CORS headers
 	res.setHeader('Access-Control-Allow-Origin', '*');
 	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 	res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -36,29 +36,25 @@ const server = http.createServer((req, res) => {
 			}
 		});
 
-		// Add user (admin)
+		// Create user
 	} else if (req.method === 'POST' && pathname === '/users') {
 		let body = '';
 		req.on('data', chunk => (body += chunk.toString()));
 		req.on('end', () => {
 			const { name, email, password, role } = JSON.parse(body);
-
 			if (!name || !email || !password) {
 				res.writeHead(400);
 				res.end(JSON.stringify({ message: 'Missing required fields' }));
 				return;
 			}
-
 			bcrypt.hash(password, saltRounds, (err, hashedPassword) => {
 				if (err) {
 					res.writeHead(500);
 					res.end(JSON.stringify({ message: 'Error hashing password' }));
 					return;
 				}
-
 				const sql = `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`;
 				const values = [name, email, hashedPassword, role || 'user'];
-
 				db.query(sql, values, (err, result) => {
 					if (err) {
 						res.writeHead(500);
@@ -82,7 +78,6 @@ const server = http.createServer((req, res) => {
 				res.end(JSON.stringify({ message: 'Missing required fields' }));
 				return;
 			}
-
 			const updates = [];
 			const values = [];
 
@@ -98,11 +93,10 @@ const server = http.createServer((req, res) => {
 				updates.push('role = ?');
 				values.push(role);
 			}
-
 			values.push(user_id);
 
 			const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
-			db.query(sql, values, (err, result) => {
+			db.query(sql, values, err => {
 				if (err) {
 					res.writeHead(500);
 					res.end(JSON.stringify({ message: 'Database error', error: err.message }));
@@ -124,8 +118,7 @@ const server = http.createServer((req, res) => {
 				res.end(JSON.stringify({ message: 'Missing user_id' }));
 				return;
 			}
-
-			db.query('DELETE FROM users WHERE id = ?', [user_id], (err, result) => {
+			db.query('DELETE FROM users WHERE id = ?', [user_id], err => {
 				if (err) {
 					res.writeHead(500);
 					res.end(JSON.stringify({ message: 'Database error', error: err.message }));
@@ -136,19 +129,17 @@ const server = http.createServer((req, res) => {
 			});
 		});
 
-		// Assign task (admin)
+		// Assign task
 	} else if (req.method === 'POST' && pathname === '/tasks') {
 		let body = '';
 		req.on('data', chunk => (body += chunk.toString()));
 		req.on('end', () => {
 			const { title, description, assigned_to, deadline } = JSON.parse(body);
-
 			if (!title || !assigned_to || !deadline) {
 				res.writeHead(400);
 				res.end(JSON.stringify({ message: 'Missing required fields' }));
 				return;
 			}
-
 			const sql = `INSERT INTO tasks (title, description, assigned_to, deadline) VALUES (?, ?, ?, ?)`;
 			db.query(sql, [title, description || '', assigned_to, deadline], (err, result) => {
 				if (err) {
@@ -166,7 +157,7 @@ const server = http.createServer((req, res) => {
 			});
 		});
 
-		// Get tasks (user)
+		// Get tasks
 	} else if (req.method === 'GET' && pathname === '/tasks') {
 		const userId = query.user_id;
 		if (!userId) {
@@ -217,13 +208,11 @@ const server = http.createServer((req, res) => {
 		req.on('end', () => {
 			try {
 				const { email, password } = JSON.parse(body);
-
 				if (!email || !password) {
 					res.writeHead(400);
 					res.end(JSON.stringify({ message: 'Email and password required' }));
 					return;
 				}
-
 				db.query('SELECT * FROM users WHERE email = ?', [email], (err, rows) => {
 					if (err) {
 						console.error('DB error during login:', err);
@@ -236,7 +225,6 @@ const server = http.createServer((req, res) => {
 						const user = rows[0];
 						bcrypt.compare(password, user.password, (err, match) => {
 							if (err) {
-								console.error('Bcrypt error:', err); // ✅ add this
 								res.writeHead(500);
 								res.end(JSON.stringify({ message: 'Error comparing password' }));
 							} else if (!match) {
@@ -258,7 +246,7 @@ const server = http.createServer((req, res) => {
 		});
 	}
 
-	// Serve static files
+	// Static file serving
 	else if (req.method === 'GET') {
 		const publicPath = path.join(__dirname, '../public');
 		const filePath = path.join(publicPath, pathname === '/' ? 'login.html' : pathname);
@@ -273,9 +261,10 @@ const server = http.createServer((req, res) => {
 				res.end(JSON.stringify({ message: 'File not found' }));
 			}
 		});
+	}
 
-		// 404 fallback
-	} else {
+	// Not found
+	else {
 		res.writeHead(404);
 		res.end(JSON.stringify({ message: 'Not found' }));
 	}
