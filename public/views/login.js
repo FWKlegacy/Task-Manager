@@ -1,4 +1,3 @@
-// login.js
 const api = 'https://task-manager-production-588c.up.railway.app';
 document.getElementById('loginForm').addEventListener('submit', async e => {
 	e.preventDefault();
